@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Virtual Environments
+venv/
+env/
+.env
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Data
+# Ignore all CSVs in the data folder EXCEPT the synthetic one
+# This prevents you from accidentally pushing real company data
+data/*.csv
+!data/synthetic_nist_ratings.csv
