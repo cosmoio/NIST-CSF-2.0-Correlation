@@ -69,6 +69,15 @@ def analyze_nist_ratings(file_path):
         num_cats = len(categories)
         if num_cats == 0:
             continue
+
+        # Calculate and print Function-level correlation
+        func_corr = func_data[manager_cols].corr(method='spearman')
+        n_func = len(func_corr)
+        if n_func > 1:
+            avg_func_corr = (func_corr.sum().sum() - n_func) / (n_func**2 - n_func)
+        else:
+            avg_func_corr = 0
+        print(f"\n--- Function: {func} (Avg Corr: {avg_func_corr:.3f}) ---")
             
         # Determine grid size for subplots
         cols = 3 if num_cats > 1 else 1
@@ -97,9 +106,12 @@ def analyze_nist_ratings(file_path):
                 else:
                     avg_corr = 0
                 
+                print(f"  Category: {cat} (Avg Corr: {avg_corr:.3f})")
+
                 sns.heatmap(cat_corr, annot=True, cmap='coolwarm', vmin=-1, vmax=1, ax=ax)
                 ax.set_title(f"{cat} (Avg Corr: {avg_corr:.2f})")
             else:
+                print(f"  Category: {cat} - Not enough data")
                 ax.text(0.5, 0.5, "Not enough data", ha='center', va='center')
                 ax.set_title(f"{cat}")
         
@@ -114,6 +126,15 @@ def analyze_nist_ratings(file_path):
     plt.show()
 
 if __name__ == "__main__":
+    import signal
+    import sys
+
+    def signal_handler(sig, frame):
+        print('\nProcess cancelled by user (Ctrl+C). Exiting...')
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+
     parser = argparse.ArgumentParser(description='Analyze NIST Ratings')
     parser.add_argument('file_path', nargs='?', default='data/synthetic_nist_ratings.csv', help='Path to the CSV file containing ratings')
     args = parser.parse_args()

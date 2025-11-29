@@ -2,59 +2,68 @@ import pandas as pd
 import numpy as np
 
 def generate_synthetic_nist_data(filename='data/synthetic_nist_ratings.csv'):
-    # NIST CSF 2.0 Structure (Functions and their Category Codes with Subcategory Counts)
-    # Counts are approximations for demonstration or based on standard CSF 2.0
-    structure = {
-        'GOVERN': {
-            'GV.OC': 5, 'GV.RM': 7, 'GV.RR': 4, 'GV.PO': 2, 'GV.OV': 3, 'GV.SC': 10
-        },
-        'IDENTIFY': {
-            'ID.AM': 6, 'ID.RA': 7, 'ID.IM': 2
-        },
-        'PROTECT': {
-            'PR.AA': 6, 'PR.AT': 5, 'PR.DS': 11, 'PR.PS': 6, 'PR.IR': 5
-        },
-        'DETECT': {
-            'DE.CM': 3, 'DE.AE': 2
-        },
-        'RESPOND': {
-            'RS.MA': 5, 'RS.AN': 5, 'RS.CO': 3, 'RS.MI': 2
-        },
-        'RECOVER': {
-            'RC.RP': 1, 'RC.CO': 3
-        }
-    }
+    # Load structure from nist.csv
+    # Assumes nist.csv is in the data folder and has columns: Function, Category, Subcategory
+    # We need to parse the Category and Subcategory columns to get the codes (e.g., GV.OC from "Organizational Context (GV.OC)...")
+    
+    nist_df = pd.read_csv('data/nist.csv')
+    
+    # Helper to extract code from text (e.g., "GV.OC" from "Organizational Context (GV.OC)...")
+    def extract_code(text):
+        if pd.isna(text): return ""
+        # Look for pattern like (XX.YY) or XX.YY-01
+        import re
+        # For Category: "Name (CODE): Description" -> extract CODE
+        cat_match = re.search(r'\(([A-Z]{2}\.[A-Z]{2})\)', text)
+        if cat_match:
+            return cat_match.group(1)
+            
+        # For Subcategory: "CODE-01: Description" -> extract CODE-01
+        sub_match = re.search(r'^([A-Z]{2}\.[A-Z]{2}-\d{2})', text)
+        if sub_match:
+            return sub_match.group(1)
+            
+        return text
 
     data = []
-    
-    # Generate subcategories for each Category
     np.random.seed(42) # Fixed seed for reproducibility
-    
-    for function, categories in structure.items():
-        for cat, num_subcats in categories.items():
-            # num_subcats is now fixed per category
+
+    for _, row in nist_df.iterrows():
+        func = row['Function']
+        cat_text = row['Category']
+        sub_text = row['Subcategory']
+        
+        cat_code = extract_code(cat_text)
+        sub_code = extract_code(sub_text)
+        
+        # If extraction failed, fallback to raw text or skip
+        if not sub_code:
+            continue
             
-            for i in range(1, num_subcats + 1):
-                subcategory_code = f"{cat}-{i:02d}" # e.g., GV.OC-01
-                
-                row = {
-                    'Function': function,
-                    'Category': cat,
-                    'Subcategory': subcategory_code,
-                }
-                
-                # Generate random ratings (1-6) for 6 Managers
-                # We add some "bias" to make the correlation interesting (not purely random noise)
-                # e.g., Managers roughly agree on the "true" maturity but vary by +/- 1
-                base_maturity = np.random.randint(0, 6) 
-                
-                for m in range(1, 7):
-                    # Manager rating is base_maturity +/- noise
-                    noise = np.random.randint(-2, 2)
-                    rating = np.clip(base_maturity + noise, 0, 6)
-                    row[f'Manager_{m}'] = rating
-                
-                data.append(row)
+        # Use the extracted codes
+        data_row = {
+            'Function': func,
+            'Category': cat_code,
+            'Subcategory': sub_code,
+        }
+        
+        # Generate random ratings (0-6) for 6 Managers
+        base_maturity = np.random.randint(0,8) 
+        
+        managers = ["Alice", "Bob", "Craig", "Carol", "Dave", "Frank"]
+        for m in range(1, 7):
+            # Manager rating is base_maturity +/- noise
+            noise = np.random.randint(-1, 1) 
+            rating = (base_maturity + noise) % 6
+            
+            
+            # Make Dave an outlier
+            if "Dave" in managers[m-1]:
+                noise = np.random.randint(-1, 1) 
+                rating = np.clip(base_maturity + noise, 5, 7)
+            data_row[managers[m-1]] = rating
+        
+        data.append(data_row)
 
     # Create DataFrame
     df = pd.DataFrame(data)
@@ -65,6 +74,15 @@ def generate_synthetic_nist_data(filename='data/synthetic_nist_ratings.csv'):
     print(df.head())
 
 if __name__ == "__main__":
+    import signal
+    import sys
+
+    def signal_handler(sig, frame):
+        print('\nProcess cancelled by user (Ctrl+C). Exiting...')
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+
     # Ensure directory exists if needed, or just save to root
     import os
     if not os.path.exists('data'):
