@@ -1,12 +1,26 @@
+import argparse
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
 def analyze_nist_ratings(file_path):
+
+    if "data/synthetic_nist_ratings.csv" in file_path:
+        print(f"Analyzing *synthetic* NIST ratings from {file_path} ...")
+    else:
+        print(f"Analyzing NIST ratings from {file_path} ...")
+
     # 1. Load Data
     # Assumes columns: 'Category', 'Subcategory', 'Manager_1', 'Manager_2', ...
-    df = pd.read_csv(file_path)
+    try:
+        df = pd.read_csv(file_path)
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' was not found. Please check the path and try again.")
+        return
+    except Exception as e:
+        print(f"An unexpected error occurred while loading the data: {e}")
+        return
     
     # Identify manager columns (assuming they are the numeric ones, or explicitly named)
     # Here we assume columns 3 onwards are managers. Adjust as necessary.
@@ -98,5 +112,8 @@ def analyze_nist_ratings(file_path):
     plt.show()
 
 if __name__ == "__main__":
-    # Example
-    analyze_nist_ratings('data/synthetic_nist_ratings.csv')
+    parser = argparse.ArgumentParser(description='Analyze NIST Ratings')
+    parser.add_argument('file_path', nargs='?', default='data/synthetic_nist_ratings.csv', help='Path to the CSV file containing ratings')
+    args = parser.parse_args()
+    
+    analyze_nist_ratings(args.file_path)
