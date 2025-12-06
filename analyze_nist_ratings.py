@@ -31,7 +31,7 @@ def analyze_nist_ratings(file_path):
 
     # --- LEVEL 1: Subcategory Analysis (Agreement/Variance) ---
     # We cannot correlate a single row, so we calculate variance/std dev
-    df['agreement_std'] = df[manager_cols].std(axis=1)
+    df['agreement_std'] = df[manager_cols].std(axis=1, ddof=0)
     df['agreement_range'] = df[manager_cols].max(axis=1) - df[manager_cols].min(axis=1)
     
     # To print ALL rows without truncation:
